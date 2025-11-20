@@ -592,11 +592,14 @@ async function read_header(table_path, encoding) {
 
 function get_header_line(document, comment_prefix) {
     const num_lines = document.lineCount;
+    let non_comment_lines_seen = 0;
     for (let lnum = 0; lnum < num_lines; ++lnum) {
         const line_text = document.lineAt(lnum).text;
-        if (!comment_prefix || !line_text.startsWith(comment_prefix)) {
+        if (comment_prefix && line_text.startsWith(comment_prefix))
+            continue;
+        non_comment_lines_seen += 1;
+        if (non_comment_lines_seen == 2)
             return [lnum, line_text];
-        }
     }
     return [null, null];
 }
