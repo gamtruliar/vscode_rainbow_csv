@@ -2726,11 +2726,10 @@ async function activate(context) {
 
     restart_extension_config();
 
-    if (get_from_config('enable_tooltip', false)) {
-        for (let language_id in dialect_map) {
-            if (dialect_map.hasOwnProperty(language_id)) {
-                register_csv_hover_info_provider(language_id, context);
-            }
+    // Register hover providers unconditionally so toggling the tooltip setting works without reloading VSCode.
+    for (let language_id in dialect_map) {
+        if (dialect_map.hasOwnProperty(language_id)) {
+            register_csv_hover_info_provider(language_id, context);
         }
     }
 
