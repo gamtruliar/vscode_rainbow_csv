@@ -484,16 +484,30 @@ class StickyHeaderProvider {
             return null;
         }
         let num_header_lines = Math.max(1, Math.min(2, Math.floor(this.num_header_lines)));
-        let last_header_lnum = Math.min(document.lineCount - 1, header_lnum + num_header_lines - 1);
-        let full_range = new vscode.Range(header_lnum, 0, document.lineCount - 1, 65535);
-        full_range = document.validateRange(full_range); // Just in case, should be always NOOP.
-        let header_range = new vscode.Range(header_lnum, 0, last_header_lnum, 65535);
-        if (!full_range.contains(header_range)) {
-            return; // Should never happen.
-        }
         let symbol_kind = vscode.SymbolKind.File; // It is vscode.SymbolKind.File because it shows a nice "File" icon in the upper navigational panel. Another nice option is "Class".
-        let header_symbol = new vscode.DocumentSymbol('data', '', symbol_kind, full_range, header_range);
-        return [header_symbol];
+        let full_range_end_line = document.lineCount - 1;
+        let header_symbols = [];
+
+        for (let i = 0; i < num_header_lines; i++) {
+            let current_header_lnum = header_lnum + i;
+            if (current_header_lnum >= document.lineCount) {
+                break;
+            }
+            let symbol_range = new vscode.Range(current_header_lnum, 0, full_range_end_line, 65535);
+            symbol_range = document.validateRange(symbol_range); // Just in case, should be always NOOP.
+            let selection_range = new vscode.Range(current_header_lnum, 0, current_header_lnum, 65535);
+            selection_range = document.validateRange(selection_range);
+            let header_symbol = new vscode.DocumentSymbol('data', '', symbol_kind, symbol_range, selection_range);
+            if (header_symbols.length) {
+                header_symbols[header_symbols.length - 1].children.push(header_symbol);
+            }
+            header_symbols.push(header_symbol);
+        }
+
+        if (!header_symbols.length) {
+            return null; // Should never happen.
+        }
+        return [header_symbols[0]];
     }
 }
 
