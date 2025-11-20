@@ -72,10 +72,12 @@
             "title": "Rainbow CSV",
             "properties": {
                 "rainbow_csv.enable_sticky_header": {
-                    "type": "boolean",
-                    "default": true,
+                    "type": "number",
+                    "default": 1,
                     "order": 1,
-                    "description": "Enable sticky header line at the top."
+                    "minimum": 0,
+                    "maximum": 2,
+                    "description": "Number of sticky header lines at the top (0 to disable, up to 2 lines)."
                 },
                 "rainbow_csv.enable_separator_autodetection": {
                     "type": "boolean",

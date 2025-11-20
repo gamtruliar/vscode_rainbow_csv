@@ -90,6 +90,7 @@ let comment_token_event = null;
 let row_background_decoration_event = null;
 let column_tracking_decoration_event = null;
 let sticky_header_disposable = null;
+let sticky_header_line_count = 1;
 let inlay_hint_disposable = null;
 
 const PLAINTEXT = 'plaintext';
@@ -469,7 +470,8 @@ function enable_rainbow_ui(active_doc) {
 
 class StickyHeaderProvider {
     // We don't utilize typescript `implement` interface keyword, because TS doesn't seem to be exporting interfaces to JS (unlike classes).
-    constructor() {
+    constructor(num_header_lines=1) {
+        this.num_header_lines = num_header_lines;
     }
     async provideDocumentSymbols(document) {
         // This can trigger multiple times for the same doc because otherwise this won't work in case of e.g. header edit.
@@ -481,9 +483,11 @@ class StickyHeaderProvider {
         if (header_lnum === null /* - this can happen for user-provided "virtual" header */ || header_lnum >= document.lineCount - 1) {
             return null;
         }
+        let num_header_lines = Math.max(1, Math.min(2, Math.floor(this.num_header_lines)));
+        let last_header_lnum = Math.min(document.lineCount - 1, header_lnum + num_header_lines - 1);
         let full_range = new vscode.Range(header_lnum, 0, document.lineCount - 1, 65535);
         full_range = document.validateRange(full_range); // Just in case, should be always NOOP.
-        let header_range = new vscode.Range(header_lnum, 0, header_lnum, 65535);
+        let header_range = new vscode.Range(header_lnum, 0, last_header_lnum, 65535);
         if (!full_range.contains(header_range)) {
             return; // Should never happen.
         }
@@ -508,12 +512,20 @@ function get_all_rainbow_lang_selector() {
 function reconfigure_sticky_header_provider(force=false) {
     // Sticky header is enabled in VSCode by default already.
     // TODO consider overriding the global config option dynamically for the current language id and workspace only, but if you do this make sure that right click -> disable on the header still disables it.
-    let enable_sticky_header = get_from_config('enable_sticky_header', false);
-    if (!enable_sticky_header) {
+    let sticky_header_setting = get_from_config('enable_sticky_header', 1);
+    if (typeof sticky_header_setting === 'boolean') {
+        sticky_header_setting = sticky_header_setting ? 1 : 0;
+    }
+    if (typeof sticky_header_setting !== 'number' || Number.isNaN(sticky_header_setting)) {
+        sticky_header_setting = 0;
+    }
+    let num_sticky_header_lines = Math.max(0, Math.min(2, Math.floor(sticky_header_setting)));
+    if (!num_sticky_header_lines) {
         if (sticky_header_disposable !== null) {
             sticky_header_disposable.dispose();
             sticky_header_disposable = null;
         }
+        sticky_header_line_count = 0;
         return;
     }
     if (sticky_header_disposable !== null && force) {
@@ -521,10 +533,15 @@ function reconfigure_sticky_header_provider(force=false) {
         sticky_header_disposable = null;
     }
     if (sticky_header_disposable !== null) {
-        // Sticky header provider already exists, nothing to do.
-        return;
+        if (sticky_header_line_count == num_sticky_header_lines) {
+            // Sticky header provider already exists with the correct number of lines.
+            return;
+        }
+        sticky_header_disposable.dispose();
+        sticky_header_disposable = null;
     }
-    let header_symbol_provider = new StickyHeaderProvider();
+    sticky_header_line_count = num_sticky_header_lines;
+    let header_symbol_provider = new StickyHeaderProvider(num_sticky_header_lines);
     sticky_header_disposable = vscode.languages.registerDocumentSymbolProvider(get_all_rainbow_lang_selector(), header_symbol_provider);
 }
 
