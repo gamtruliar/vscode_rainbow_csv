@@ -598,7 +598,7 @@ function get_header_line(document, comment_prefix) {
         if (comment_prefix && line_text.startsWith(comment_prefix))
             continue;
         non_comment_lines_seen += 1;
-        if (non_comment_lines_seen == 2)
+        if (non_comment_lines_seen == 1)
             return [lnum, line_text];
     }
     return [null, null];
